@@ -30,7 +30,7 @@ namespace {0};
          * 1: exception documentation comment (prefixed with newline or empty)
          * 2: propertyValue(s/0..n) documentation comment (prefixed with newline or empty)
          * 3: generic parameters (with brackets or empty)
-         * 4: exception parameter (prefixed with a comma or empty)
+         * 4: exception parameter (postfixed with a comma or empty)
          * 5: propertyValue(s/0..n) parameter(s) (prefixed with a comma or empty)
          * 6: exception argument (prefixed with a comma or empty)
          * 7: propertyValue(s/0..n) argument(s)
@@ -41,7 +41,7 @@ namespace {0};
 {0}/// <param name=""level"">The level of the event.</param>{1}
 {0}/// <param name=""messageTemplate"">Message template describing the event.</param>{2}
 {0}[MessageTemplateFormatMethod(""messageTemplate"")]
-{0}void Write{3}(LogEventLevel level{4}, string messageTemplate{5})
+{0}void Write{3}(LogEventLevel level, {4}string messageTemplate{5})
 #if FEATURE_DEFAULT_INTERFACE
 {0}{{
 {0}{0}// Avoid the array allocation and any boxing allocations when the level isn't enabled
@@ -54,13 +54,63 @@ namespace {0};
 {0}{0};
 #endif";
 
+        /*
+         * 0: tab
+         * 1: exception documentation comment (prefixed with newline or empty)
+         * 2: propertyValue(s/0..n) documentation comment (prefixed with newline or empty)
+         * 3: generic parameters (with brackets or empty)
+         * 4: exception parameter (postfixed with a comma or empty)
+         * 5: propertyValue(s/0..n) parameter(s) (prefixed with a comma or empty)
+         * 6: exception argument (prefixed with a comma or empty)
+         * 7: propertyValue(s/0..n) argument(s)
+         * 8: LogEventLevel
+         * 9: LogEventLevel argument (or empty)
+         * 10: example code
+         * 11: forwarded method
+         */
+        private const string LevelMethodTemplate = @"{0}/// <summary>
+{0}/// Write a log event with the <see cref=""LogEventLevel.{8}""/> level and associated exception.
+{0}/// </summary>{1}
+{0}/// <param name=""messageTemplate"">Message template describing the event.</param>{2}
+{0}/// <example><code>
+{0}/// {10}
+{0}/// </code></example>
+{0}[MessageTemplateFormatMethod(""messageTemplate"")]
+{0}void {8}{3}({4}string messageTemplate{5})
+#if FEATURE_DEFAULT_INTERFACE
+{0}{0}=> {11}({9}{6}, messageTemplate, {7})
+#endif
+{0};";
+
+        private static readonly Dictionary<string, string> ExampleCodesWithoutException = new()
+        {
+            { "Verbose", "Log.Verbose(\"Staring into space, wondering if we're alone.\");" },
+            { "Debug", "Log.Debug(\"Starting up at {StartedAt}.\", DateTime.Now);" },
+            { "Information", "Log.Information(\"Processed {RecordCount} records in {TimeMS}.\", records.Length, sw.ElapsedMilliseconds);" },
+            { "Warning", "Log.Warning(\"Skipped {SkipCount} records.\", skippedRecords.Length);" },
+            { "Error", "Log.Error(\"Failed {ErrorCount} records.\", brokenRecords.Length);" },
+            { "Fatal", "Log.Fatal(\"Process terminating.\");" },
+        };
+
+        private static readonly Dictionary<string, string> ExampleCodesWithException = new()
+        {
+            { "Verbose", "Log.Verbose(ex, \"Staring into space, wondering where this comet came from.\");" },
+            { "Debug", "Log.Debug(ex, \"Swallowing a mundane exception.\");" },
+            { "Information", "Log.Information(ex, \"Processed {RecordCount} records in {TimeMS}.\", records.Length, sw.ElapsedMilliseconds);" },
+            { "Warning", "Log.Warning(ex, \"Skipped {SkipCount} records.\", skippedRecords.Length);" },
+            { "Error", "Log.Error(ex, \"Failed {ErrorCount} records.\", brokenRecords.Length);" },
+            { "Fatal", "Log.Fatal(ex, \"Process terminating.\");" },
+        };
+
         private static readonly string ExceptionDocumentationComment = $"{NewLine}{Tab}/// <param name=\"exception\">Exception related to the event.</param>";
-        private const string ExceptionParameter = ", Exception? exception";
+        private const string ExceptionParameter = "Exception? exception, ";
         private const string ExceptionArgument = ", exception";
 
         private static readonly string PropertyValuesObjectArrayDocumentationComment = $"{NewLine}{Tab}/// <param name=\"propertyValues\">Objects positionally formatted into the message template.</param>";
         private const string PropertyValuesObjectArrayProperty = ", params object?[]? propertyValues";
         private const string NotPropertyValues = "NoPropertyValues";
+
+        private const string WriteMethod = "Write";
 
         public void Execute(GeneratorExecutionContext context)
         {
@@ -164,6 +214,138 @@ namespace {0};
                     }
                 }
 
+                foreach (var logEvenLevel in logEventLevels)
+                {
+                    // method without exception and with propertyValues as an object array
+                    methodSources.AppendFormat(LevelMethodTemplate, Tab,
+                        /* exception doccumentation comment */ "",
+                        /* propertyValue(s/0..n) documentation comment */ PropertyValuesObjectArrayDocumentationComment,
+                        /* generic parameters */ "",
+                        /* exception parameter */ "",
+                        /* propertyValue(s/0..n) parameter(s) */ PropertyValuesObjectArrayProperty,
+                        /* exception argument */ "(Exception?)null",
+                        /* propertyValue(s/0..n) argument(s) */ "propertyValues",
+                        /* LogEventLevel */ logEvenLevel,
+                        /* LogEventLevel argument */ "",
+                        /* example code */ ExampleCodesWithoutException[logEvenLevel],
+                        /* forwarded method */ logEvenLevel
+                    ).AppendLine().AppendLine();
+
+                    // method without exception and without propertyValues
+                    methodSources.AppendFormat(LevelMethodTemplate, Tab,
+                        /* exception doccumentation comment */ "",
+                        /* propertyValue(s/0..n) documentation comment */ "",
+                        /* generic parameters */ "",
+                        /* exception parameter */ "",
+                        /* propertyValue(s/0..n) parameter(s) */ "",
+                        /* exception argument */ "",
+                        /* propertyValue(s/0..n) argument(s) */ NotPropertyValues,
+                        /* LogEventLevel */ logEvenLevel,
+                        /* LogEventLevel argument */ $"LogEventLevel.{logEvenLevel}",
+                        /* example code */ ExampleCodesWithoutException[logEvenLevel],
+                        /* forwarded method */ WriteMethod
+                    ).AppendLine().AppendLine();
+
+                    // method with exception and without propertyValues
+                    methodSources.AppendFormat(LevelMethodTemplate, Tab,
+                        /* exception doccumentation comment */ ExceptionDocumentationComment,
+                        /* propertyValue(s/0..n) documentation comment */ "",
+                        /* generic parameters */ "",
+                        /* exception parameter */ ExceptionParameter,
+                        /* propertyValue(s/0..n) parameter(s) */ "",
+                        /* exception argument */ ExceptionArgument,
+                        /* propertyValue(s/0..n) argument(s) */ NotPropertyValues,
+                        /* LogEventLevel */ logEvenLevel,
+                        /* LogEventLevel argument */ $"LogEventLevel.{logEvenLevel}",
+                        /* example code */ ExampleCodesWithException[logEvenLevel],
+                        /* forwarded method */ WriteMethod
+                    ).AppendLine().AppendLine();
+
+                    // method with exception and with propertyValues as an object array
+                    methodSources.AppendFormat(LevelMethodTemplate, Tab,
+                        /* exception doccumentation comment */ ExceptionDocumentationComment,
+                        /* propertyValue(s/0..n) documentation comment */ PropertyValuesObjectArrayDocumentationComment,
+                        /* generic parameters */ "",
+                        /* exception parameter */ ExceptionParameter,
+                        /* propertyValue(s/0..n) parameter(s) */ PropertyValuesObjectArrayProperty,
+                        /* exception argument */ ExceptionArgument,
+                        /* propertyValue(s/0..n) argument(s) */ "propertyValues",
+                        /* LogEventLevel */ logEvenLevel,
+                        /* LogEventLevel argument */ $"LogEventLevel.{logEvenLevel}",
+                        /* example code */ ExampleCodesWithException[logEvenLevel],
+                        /* forwarded method */ WriteMethod
+                    ).AppendLine().AppendLine();
+
+                    // generic methods with and without exception, and with propertyValue(s)
+                    if (genericOverrideCount != 0)
+                    {
+                        var propValueComments = new StringBuilder().AppendLine().Append(Tab);
+                        var genericParams = new StringBuilder().Append('<');
+                        var propValueParams = new StringBuilder().Append(", ");
+                        var propValueForwardArgs = new StringBuilder();
+
+                        for (int i = 0; i < genericOverrideCount; i++)
+                        {
+                            // skip "0" when we only have 1 propertyValue
+                            string istr = i == 0 ? "" : i.ToString();
+
+                            if (i == 1)
+                            {
+                                // return the "0" we skipped above
+                                propValueComments.Replace("propertyValue", "propertyValue0");
+                                genericParams.Append(0);
+                                propValueParams.Replace("T propertyValue", "T0 propertyValue0");
+                                propValueForwardArgs.Append(0);
+                            }
+
+                            if (i != 0)
+                            {
+                                propValueComments.AppendLine().Append(Tab);
+                                genericParams.Append(", ");
+                                propValueParams.Append(", ");
+                                propValueForwardArgs.Append(", ");
+                            }
+
+                            propValueComments.Append("/// <param name=\"propertyValue").Append(istr)
+                                .Append("\">Object positionally formatted into the message template.</param>");
+                            genericParams.Append('T').Append(istr).Append('>');
+                            propValueParams.Append('T').Append(istr).Append(" propertyValue").Append(istr);
+                            propValueForwardArgs.Append("propertyValue").Append(istr);
+
+                            // method without exception and with generic propertyValues
+                            methodSources.AppendFormat(LevelMethodTemplate, Tab,
+                                /* exception doccumentation comment */ "",
+                                /* propertyValue(s/0..n) documentation comment */ propValueComments,
+                                /* generic parameters */ genericParams,
+                                /* exception parameter */ "",
+                                /* propertyValue(s/0..n) parameter(s) */ propValueParams,
+                                /* exception argument */ "",
+                                /* propertyValue(s/0..n) argument(s) */ propValueForwardArgs,
+                                /* LogEventLevel */ logEvenLevel,
+                                /* LogEventLevel argument */ $"LogEventLevel.{logEvenLevel}",
+                                /* example code */ ExampleCodesWithoutException[logEvenLevel],
+                                /* forwarded method */ WriteMethod
+                            ).AppendLine().AppendLine();
+
+                            // method with exception and with generic propertyValues
+                            methodSources.AppendFormat(LevelMethodTemplate, Tab,
+                                /* exception doccumentation comment */ ExceptionDocumentationComment,
+                                /* propertyValue(s/0..n) documentation comment */ propValueComments,
+                                /* generic parameters */ genericParams,
+                                /* exception parameter */ ExceptionParameter,
+                                /* propertyValue(s/0..n) parameter(s) */ propValueParams,
+                                /* exception argument */ ExceptionArgument,
+                                /* propertyValue(s/0..n) argument(s) */ propValueForwardArgs,
+                                /* LogEventLevel */ logEvenLevel,
+                                /* LogEventLevel argument */ $"LogEventLevel.{logEvenLevel}",
+                                /* example code */ ExampleCodesWithException[logEvenLevel],
+                                /* forwarded method */ WriteMethod
+                            ).AppendLine().AppendLine();
+
+                            genericParams.Length--; // undo last .Append('>')
+                        }
+                    }
+                }
 
                 methodSources.Length -= NewLine.Length * 2; // undo last 2 .AppendLine()
 
