@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using SourceGeneratorAttributes;
 using System.Diagnostics;
 
 namespace Serilog;
@@ -31,7 +32,11 @@ namespace Serilog;
 /// The methods on <see cref="ILogger"/> (and its static sibling <see cref="Log"/>) are guaranteed
 /// never to throw exceptions. Methods on all other types may.
 /// </remarks>
-public interface ILogger
+[LoggerGenerate(
+    genericOverrideCount: 3,
+    $"{nameof(LogEventLevel.Verbose)},{nameof(LogEventLevel.Debug)},{nameof(LogEventLevel.Information)},{nameof(LogEventLevel.Warning)},{nameof(LogEventLevel.Error)},{nameof(LogEventLevel.Fatal)}"
+)]
+public partial interface ILogger
 {
 #if FEATURE_DEFAULT_INTERFACE
     private static readonly object[] NoPropertyValues = Array.Empty<object>();
@@ -134,88 +139,6 @@ public interface ILogger
     /// Write a log event with the specified level.
     /// </summary>
     /// <param name="level">The level of the event.</param>
-    /// <param name="messageTemplate">Message template describing the event.</param>
-    [MessageTemplateFormatMethod("messageTemplate")]
-    void Write(LogEventLevel level, string messageTemplate)
-#if FEATURE_DEFAULT_INTERFACE
-    {
-        // Avoid the array allocation and any boxing allocations when the level isn't enabled
-        if (IsEnabled(level))
-        {
-            Write(level, messageTemplate, NoPropertyValues);
-        }
-    }
-#else
-        ;
-#endif
-
-    /// <summary>
-    /// Write a log event with the specified level.
-    /// </summary>
-    /// <param name="level">The level of the event.</param>
-    /// <param name="messageTemplate">Message template describing the event.</param>
-    /// <param name="propertyValue">Object positionally formatted into the message template.</param>
-    [MessageTemplateFormatMethod("messageTemplate")]
-    void Write<T>(LogEventLevel level, string messageTemplate, T propertyValue)
-#if FEATURE_DEFAULT_INTERFACE
-    {
-        // Avoid the array allocation and any boxing allocations when the level isn't enabled
-        if (IsEnabled(level))
-        {
-            Write(level, messageTemplate, new object?[] { propertyValue });
-        }
-    }
-#else
-        ;
-#endif
-
-    /// <summary>
-    /// Write a log event with the specified level.
-    /// </summary>
-    /// <param name="level">The level of the event.</param>
-    /// <param name="messageTemplate">Message template describing the event.</param>
-    /// <param name="propertyValue0">Object positionally formatted into the message template.</param>
-    /// <param name="propertyValue1">Object positionally formatted into the message template.</param>
-    [MessageTemplateFormatMethod("messageTemplate")]
-    void Write<T0, T1>(LogEventLevel level, string messageTemplate, T0 propertyValue0, T1 propertyValue1)
-#if FEATURE_DEFAULT_INTERFACE
-    {
-        // Avoid the array allocation and any boxing allocations when the level isn't enabled
-        if (IsEnabled(level))
-        {
-            Write(level, messageTemplate, new object?[] { propertyValue0, propertyValue1 });
-        }
-    }
-#else
-        ;
-#endif
-
-    /// <summary>
-    /// Write a log event with the specified level.
-    /// </summary>
-    /// <param name="level">The level of the event.</param>
-    /// <param name="messageTemplate">Message template describing the event.</param>
-    /// <param name="propertyValue0">Object positionally formatted into the message template.</param>
-    /// <param name="propertyValue1">Object positionally formatted into the message template.</param>
-    /// <param name="propertyValue2">Object positionally formatted into the message template.</param>
-    [MessageTemplateFormatMethod("messageTemplate")]
-    void Write<T0, T1, T2>(LogEventLevel level, string messageTemplate, T0 propertyValue0, T1 propertyValue1, T2 propertyValue2)
-#if FEATURE_DEFAULT_INTERFACE
-    {
-        // Avoid the array allocation and any boxing allocations when the level isn't enabled
-        if (IsEnabled(level))
-        {
-            Write(level, messageTemplate, new object?[] { propertyValue0, propertyValue1, propertyValue2 });
-        }
-    }
-#else
-        ;
-#endif
-
-    /// <summary>
-    /// Write a log event with the specified level.
-    /// </summary>
-    /// <param name="level">The level of the event.</param>
     /// <param name="messageTemplate"></param>
     /// <param name="propertyValues"></param>
     [MessageTemplateFormatMethod("messageTemplate")]
@@ -224,92 +147,6 @@ public interface ILogger
         => Write(level, (Exception?)null, messageTemplate, propertyValues)
 #endif
     ;
-
-    /// <summary>
-    /// Write a log event with the specified level and associated exception.
-    /// </summary>
-    /// <param name="level">The level of the event.</param>
-    /// <param name="exception">Exception related to the event.</param>
-    /// <param name="messageTemplate">Message template describing the event.</param>
-    [MessageTemplateFormatMethod("messageTemplate")]
-    void Write(LogEventLevel level, Exception? exception, string messageTemplate)
-#if FEATURE_DEFAULT_INTERFACE
-    {
-        // Avoid the array allocation and any boxing allocations when the level isn't enabled
-        if (IsEnabled(level))
-        {
-            Write(level, exception, messageTemplate, NoPropertyValues);
-        }
-    }
-#else
-        ;
-#endif
-
-    /// <summary>
-    /// Write a log event with the specified level and associated exception.
-    /// </summary>
-    /// <param name="level">The level of the event.</param>
-    /// <param name="exception">Exception related to the event.</param>
-    /// <param name="messageTemplate">Message template describing the event.</param>
-    /// <param name="propertyValue">Object positionally formatted into the message template.</param>
-    [MessageTemplateFormatMethod("messageTemplate")]
-    void Write<T>(LogEventLevel level, Exception? exception, string messageTemplate, T propertyValue)
-#if FEATURE_DEFAULT_INTERFACE
-    {
-        // Avoid the array allocation and any boxing allocations when the level isn't enabled
-        if (IsEnabled(level))
-        {
-            Write(level, exception, messageTemplate, new object?[] { propertyValue });
-        }
-    }
-#else
-        ;
-#endif
-
-    /// <summary>
-    /// Write a log event with the specified level and associated exception.
-    /// </summary>
-    /// <param name="level">The level of the event.</param>
-    /// <param name="exception">Exception related to the event.</param>
-    /// <param name="messageTemplate">Message template describing the event.</param>
-    /// <param name="propertyValue0">Object positionally formatted into the message template.</param>
-    /// <param name="propertyValue1">Object positionally formatted into the message template.</param>
-    [MessageTemplateFormatMethod("messageTemplate")]
-    void Write<T0, T1>(LogEventLevel level, Exception? exception, string messageTemplate, T0 propertyValue0, T1 propertyValue1)
-#if FEATURE_DEFAULT_INTERFACE
-    {
-        // Avoid the array allocation and any boxing allocations when the level isn't enabled
-        if (IsEnabled(level))
-        {
-            Write(level, exception, messageTemplate, new object?[] { propertyValue0, propertyValue1 });
-        }
-    }
-#else
-        ;
-#endif
-
-    /// <summary>
-    /// Write a log event with the specified level and associated exception.
-    /// </summary>
-    /// <param name="level">The level of the event.</param>
-    /// <param name="exception">Exception related to the event.</param>
-    /// <param name="messageTemplate">Message template describing the event.</param>
-    /// <param name="propertyValue0">Object positionally formatted into the message template.</param>
-    /// <param name="propertyValue1">Object positionally formatted into the message template.</param>
-    /// <param name="propertyValue2">Object positionally formatted into the message template.</param>
-    [MessageTemplateFormatMethod("messageTemplate")]
-    void Write<T0, T1, T2>(LogEventLevel level, Exception? exception, string messageTemplate, T0 propertyValue0, T1 propertyValue1, T2 propertyValue2)
-#if FEATURE_DEFAULT_INTERFACE
-    {
-        // Avoid the array allocation and any boxing allocations when the level isn't enabled
-        if (IsEnabled(level))
-        {
-            Write(level, exception, messageTemplate, new object?[] { propertyValue0, propertyValue1, propertyValue2 });
-        }
-    }
-#else
-        ;
-#endif
 
     /// <summary>
     /// Write a log event with the specified level and associated exception.
